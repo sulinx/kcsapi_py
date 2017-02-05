@@ -16,7 +16,12 @@ def start():
 
 @app.route('/api_get_member/<funcm>',methods=[ 'POST'])
 def api_get_member(funcm):
-    pass
+    if request.form[api_token]:
+        resp = make_response(svdata, 200)
+        resp.headers['Content-Type'] = 'application/json;charset=utf-8'
+        return resp
+    else:
+        abort(401)
 @app.route('/api_port/port',methods=[ 'POST'])
 def api_port():
     pass
