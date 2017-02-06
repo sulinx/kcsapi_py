@@ -3,6 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from svdata import *
 import json
 from random import randrange
+from time import time
+from datetime import datetime
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:password@localhost/kancolle'
@@ -126,26 +128,70 @@ def get_slotitem(user,fuel=10, bullet=10, steel=10, alum=10):
         '{"api_create_flag":1,"api_shizai_flag":1,"api_slot_item":{"api_id":43,"api_slotitem_id":44},"api_material":[99999,99999,99999,99999,999,999,999,999],"api_type3":15,"api_unsetslot":[10,43]}')
     new_slotitem['api_slot_item']['api_id'] = api_id
     slot_id = randrange(1, 138)
-    api_type3 = Slotitem.query.filter_by(api_id=slot_id).first().api_type[2]
+    api_type3 = json.loads(Slotitem.query.filter_by(api_id=slot_id).first().api_type)[2]
     new_slotitem['api_slot_item']['api_slotitem_id'] = slot_id
-    new_slotitem['api_slot_item']['api_type3'] = api_type3
+    new_slotitem['api_type3'] = api_type3
     data = json.loads('{"api_id":10,"api_slotitem_id":56,"api_locked":0,"api_level":0,"api_equipped":0}')
     data['api_id'] = api_id
     data['api_slotitem_id'] = slot_id
-    user.slot_item = json.dumps(json.loads(user.slot_item).append(data))
+    slot_item = json.loads(user.slot_item)
+    slot_item.append(data)
+    user.slot_item = json.dumps(slot_item)
     db.session.commit()
     return json.dumps(new_slotitem)
 
 
-def furniture_change(uid, fur_list=["35", "71", "118", "101", "160", "189"]):
-    fur_list = [request.form['api_floor'], request.form['api_wallpaper'], request.form['api_wallhanging'],
+def furniture_change(user, fur_list=["35", "71", "118", "101", "160", "189"]):
+    if '' not in fur_list:
+        fur_list = [request.form['api_floor'], request.form['api_wallpaper'], request.form['api_wallhanging'],
                 request.form['api_window'], request.form['api_shelf'], request.form['api_desk']]
+    else:
+        fur_list = ["35", "71", "118", "101", "160", "189"]
     api_basic = json.loads(user.api_basic)
     api_basic['api_furniture'] = fur_list
     user.api_basic = json.dumps(api_basic)
     db.session.commit()
     return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
 
+
+def creatship(user, fuel=30, bullet=30, steel=30, alum=30, large_flag=0, zicai=1, quick_flag=0, kdock_id=1):
+    shipnum = int(user.slotnum) + 1
+    if large_flag == '1':
+        if zicai == '1':
+            pool = Shipdata.query.filter(Shipdata.api_backs > 4, Shipdata.api_backs < 8,
+                                         Shipdata.api_afterlv != 0).all()
+            rand = pool[randrange(len(pool))]
+        elif zicai == '20':
+            pool = Shipdata.query.filter(Shipdata.api_backs > 5, Shipdata.api_backs < 8,
+                                         Shipdata.api_afterlv != 0).all()
+            rand = pool[randrange(len(pool))]
+        elif zicai == '100':
+            pool = Shipdata.query.filter(Shipdata.api_backs > 6, Shipdata.api_backs < 8,
+                                         Shipdata.api_afterlv != 0).all()
+            rand = pool[randrange(len(pool))]
+    elif large_flag == '0':
+        pool = Shipdata.query.filter(Shipdata.api_backs > 0, Shipdata.api_backs < 6,
+                                     Shipdata.api_afterlv != 0).all()
+        rand = pool[randrange(len(pool))]
+
+    # 建造渠
+    #print(rand.api_name)
+    buildtime = rand.api_buildtime
+    comptime = datetime.now().timestamp() + buildtime * 60
+    date = datetime.fromtimestamp(comptime).strftime('%Y-%m-%d %H:%M:%S')
+    kdock = json.loads(user.api_kdock)
+    kdock[int(kdock_id) - 1]['api_created_ship_id'] = rand.api_id
+    kdock[int(kdock_id) - 1]['api_state'] = 2
+    kdock[int(kdock_id) - 1]['api_complete_time'] = int(comptime) * 1000
+    kdock[int(kdock_id) - 1]['api_complete_time_str'] = date
+    kdock[int(kdock_id) - 1]['api_item1'] = fuel
+    kdock[int(kdock_id) - 1]['api_item2'] = bullet
+    kdock[int(kdock_id) - 1]['api_item3'] = steel
+    kdock[int(kdock_id) - 1]['api_item4'] = alum
+    kdock[int(kdock_id) - 1]['api_item5'] = zicai
+    user.api_kdock = json.dumps(kdock)
+    db.session.commit()
+    return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
 
 @app.route('/api_start2',methods=['GET', 'POST'])
 def start():
@@ -263,15 +309,8 @@ def api_req_kousyou(funck):
             zicai = request.form['api_item5']
             large_flag = request.form['api_large_flag']
             quick_flag = request.form['api_highspeed']
-            kdock_id = request.form['api_kdock_id'] -1
-            def getship(uid,fuel=30,bullet=30,steel=30,alum=30,large_flag=0,zicai=1,quick_flag=0,kdock_id=1):
-                if large_flag == 1:
-                    if zicai == 1:
-                        pool = Shipdata.query.filter(Shipdata.api_backs>=5 , Shipdata.api_backs<=7)
-                        pool.len
-
-
-
+            kdock_id = request.form['api_kdock_id']
+        return creatship(user,fuel,bullet,steel,alum,large_flag,quick_flag,kdock_id)
         #建造加速
         if funck == 'createship_speedchange':
             pass
@@ -282,8 +321,14 @@ def api_req_kousyou(funck):
             pass
         if funck == 'getnum':
             pass
+        #获得舰娘
         if funck == 'getship':
-            pass
+            def getship():
+                new_ship = json.loads(
+                    '{"api_id":2853,"api_sortno":73,"api_ship_id":36,"api_lv":1,"api_exp":[0,100,0],"api_nowhp":15,"api_maxhp":15,"api_leng":1,"api_slot":[-1,-1,-1,-1,-1],"api_onslot":[0,0,0,0,0],"api_kyouka":[0,0,0,0,0],"api_backs":1,"api_fuel":15,"api_bull":20,"api_slotnum":2,"api_ndock_time":0,"api_ndock_item":[0,0],"api_srate":0,"api_cond":40,"api_karyoku":[12,29],"api_raisou":[27,69],"api_taiku":[14,39],"api_soukou":[6,19],"api_kaihi":[42,79],"api_taisen":[20,49],"api_sakuteki":[5,19],"api_lucky":[10,49],"api_locked":0,"api_locked_equip":0}')
+                new_ship['api_id'] = shipnum
+                new_ship['api_ship_id'] = rand.api_id
+                new_ship['api_sortno'] = rand.api_sortno
 
 
 @app.route('/api_req_member/<funm1>',methods=[ 'POST'])
@@ -316,3 +361,7 @@ def api_req_ranking():
 
 if __name__ == '__main__':
     app.run()
+
+
+
+
