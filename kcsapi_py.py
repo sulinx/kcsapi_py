@@ -155,7 +155,6 @@ def furniture_change(user, fur_list=["35", "71", "118", "101", "160", "189"]):
 
 
 def creatship(user, fuel=30, bullet=30, steel=30, alum=30, large_flag=0, zicai=1, quick_flag=0, kdock_id=1):
-    shipnum = int(user.slotnum) + 1
     if large_flag == '1':
         if zicai == '1':
             pool = Shipdata.query.filter(Shipdata.api_backs > 4, Shipdata.api_backs < 8,
@@ -191,7 +190,102 @@ def creatship(user, fuel=30, bullet=30, steel=30, alum=30, large_flag=0, zicai=1
     kdock[int(kdock_id) - 1]['api_item5'] = zicai
     user.api_kdock = json.dumps(kdock)
     db.session.commit()
+    if quick_flag == '1':
+        quick_creat(user,kdock_id)
     return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
+
+
+def quick_creat(user, kdock_id):
+    kdock = json.loads(user.api_kdock)
+    kdock_id = int(kdock_id) - 1
+    kdock[kdock_id]['api_state'] = 3
+    kdock[kdock_id]['api_complete_time'] = 0
+    kdock[kdock_id]['api_complete_time_str'] = 0
+    user.api_kdock = json.dumps(kdock)
+    db.session.commit()
+    return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
+
+
+def destroyitem(user, slotitem_ids):
+    slotitem_ids = slotitem_ids.split(',')
+    data = json.loads(user.slot_item)
+    lis = []
+    res1 = [0, 0, 0, 0]
+    for item in data:
+        if str(item['api_id']) in slotitem_ids:
+            res = json.loads(Slotitem.query.filter_by(api_id=item['api_slotitem_id']).first().api_broken)
+            res1[0] = int(res[0]) + res1[0]
+            res1[1] = int(res[1]) + res1[1]
+            res1[2] = int(res[2]) + res1[2]
+            res1[3] = int(res[3]) + res1[3]
+            lis.append(item)
+    for i in lis:
+        data.remove(i)
+    user.slotitem = json.dumps(data)
+    db.session.commit()
+    return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":{"api_get_material":%s}}' % json.dumps(
+        res1)
+
+
+def destroyship(user, api_ship_id):
+    data = json.loads(user.api_ship)
+    for ship in data:
+        if str(ship['api_id']) == api_ship_id:
+            res = json.loads(Shipdata.query.filter_by(api_id=ship['api_ship_id']).first().api_broken)
+            data.remove(ship)
+            break
+    user.api_ship = json.dumps(data)
+    db.session.commit()
+    return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":{"api_material":[99999,99999,99999,99999]}}'
+
+
+def getkship(user, api_kdock_id):
+    shipnum = int(user.slotnum) + 1
+    user.slotnum = shipnum
+    api_kdock_id = int(api_kdock_id) - 1
+    kdock = json.loads(user.api_kdock)
+    data = json.loads(user.api_ship)
+    new = Shipdata.query.filter_by(api_id=int(kdock[api_kdock_id]['api_created_ship_id'])).first()
+    kdock[api_kdock_id]['api_state'] = 0
+    kdock[api_kdock_id]['api_complete_time'] = 0
+    kdock[api_kdock_id]['api_complete_time_str'] = 0
+    kdock[api_kdock_id]['api_created_ship_id'] = 0
+    kdock[api_kdock_id]['api_item1'] = 0
+    kdock[api_kdock_id]['api_item2'] = 0
+    kdock[api_kdock_id]['api_item3'] = 0
+    kdock[api_kdock_id]['api_item4'] = 0
+    kdock[api_kdock_id]['api_item5'] = 1
+    user.api_kdock = json.dumps(kdock)
+    new_ship = json.loads(
+        '{"api_id":2853,"api_sortno":73,"api_ship_id":36,"api_lv":1,"api_exp":[0,100,0],"api_nowhp":15,"api_maxhp":15,"api_leng":1,"api_slot":[-1,-1,-1,-1,-1],"api_onslot":[0,0,0,0,0],"api_kyouka":[0,0,0,0,0],"api_backs":1,"api_fuel":15,"api_bull":20,"api_slotnum":2,"api_ndock_time":0,"api_ndock_item":[0,0],"api_srate":0,"api_cond":40,"api_karyoku":[12,29],"api_raisou":[27,69],"api_taiku":[14,39],"api_soukou":[6,19],"api_kaihi":[42,79],"api_taisen":[20,49],"api_sakuteki":[5,19],"api_lucky":[10,49],"api_locked":0,"api_locked_equip":0}')
+    new_ship['api_id'] = shipnum
+    new_ship['api_ship_id'] = int(new.api_id)
+    new_ship['api_sortno'] = int(new.api_sortno)
+    new_ship['api_nowhp'] = int(json.loads(new.api_taik)[0])
+    new_ship['api_maxhp'] = int(json.loads(new.api_taik)[0])
+    new_ship['api_leng'] = int(new.api_leng)
+    new_ship['api_sonslot'] = json.loads(new.api_maxeq)
+    new_ship['api_backs'] = int(new.api_backs)
+    new_ship['api_fuel'] = int(new.api_fuel_max)
+    new_ship['api_bull'] = int(new.api_fuel_max)
+    new_ship['api_slotnum'] = int(new.api_slot_num)
+    new_ship['api_karyoku'] = json.loads(new.api_houg)
+    new_ship['api_raisou'] = json.loads(new.api_raig)
+    new_ship['api_taiku'] = json.loads(new.api_tyku)
+    new_ship['api_soukou'] = json.loads(new.api_souk)
+    new_ship['api_taisen'] = [40, 99]
+    new_ship['api_sakuteki'] = [40, 99]
+    new_ship['api_kaihi'] = [50, 99]
+    data.append(new_ship)
+    user.api_ship = json.dumps(data)
+    db.session.commit()
+    resp = dict(api_result=1, api_result_msg='成功',
+                api_data=dict(api_id=shipnum, api_ship_id=new_ship['api_ship_id'], api_kdock=kdock, api_ship=new_ship,
+                              api_slotitem=None))
+    resp = 'svdata=' + json.dumps(resp)
+    print(resp)
+    return resp
+
 
 @app.route('/api_start2',methods=['GET', 'POST'])
 def start():
@@ -310,25 +404,23 @@ def api_req_kousyou(funck):
             large_flag = request.form['api_large_flag']
             quick_flag = request.form['api_highspeed']
             kdock_id = request.form['api_kdock_id']
-        return creatship(user,fuel,bullet,steel,alum,large_flag,quick_flag,kdock_id)
+            return creatship(user,fuel,bullet,steel,alum,large_flag,quick_flag,kdock_id)
         #建造加速
         if funck == 'createship_speedchange':
-            pass
-
+            return quick_creat(user,request.form['api_kdock_id'])
+        #装备拆解
         if funck == 'destroyitem2':
-            pass
+            slotitem_ids = request.form['api_slotitem_ids']
+            return destroyitem(user,slotitem_ids)
+        #船只解体
         if funck == 'destroyship':
-            pass
-        if funck == 'getnum':
-            pass
+            api_ship_id = request.form['api_ship_id']
+            return destroyship(user,api_ship_id)
         #获得舰娘
         if funck == 'getship':
-            def getship():
-                new_ship = json.loads(
-                    '{"api_id":2853,"api_sortno":73,"api_ship_id":36,"api_lv":1,"api_exp":[0,100,0],"api_nowhp":15,"api_maxhp":15,"api_leng":1,"api_slot":[-1,-1,-1,-1,-1],"api_onslot":[0,0,0,0,0],"api_kyouka":[0,0,0,0,0],"api_backs":1,"api_fuel":15,"api_bull":20,"api_slotnum":2,"api_ndock_time":0,"api_ndock_item":[0,0],"api_srate":0,"api_cond":40,"api_karyoku":[12,29],"api_raisou":[27,69],"api_taiku":[14,39],"api_soukou":[6,19],"api_kaihi":[42,79],"api_taisen":[20,49],"api_sakuteki":[5,19],"api_lucky":[10,49],"api_locked":0,"api_locked_equip":0}')
-                new_ship['api_id'] = shipnum
-                new_ship['api_ship_id'] = rand.api_id
-                new_ship['api_sortno'] = rand.api_sortno
+            api_kdock_id = request.form['api_kdock_id']
+            return getkship(user,api_kdock_id)
+
 
 
 @app.route('/api_req_member/<funm1>',methods=[ 'POST'])
