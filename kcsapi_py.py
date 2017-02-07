@@ -354,9 +354,9 @@ def kaisou_slotset(user,api_item_id,ship_id,api_slot_idx):
         slotitems[k]['api_equipped'] = 1
     user.slot_item = json.dumps(slotitems)
     user.api_ship = json.dumps(ships)
-    print(ships[i]['api_slot'])
-    print(slotitems)
-    #db.session.commit()
+    #print(ships[i]['api_slot'])
+    #print(slotitems)
+    db.session.commit()
     return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
 
 @app.route('/api_start2',methods=['GET', 'POST'])
