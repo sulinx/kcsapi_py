@@ -123,17 +123,18 @@ class Shipdata(db.Model):
 
 
 def get_slotitem(user,fuel=10, bullet=10, steel=10, alum=10):
+    fuel, bullet, steel, alum = map(int,[fuel, bullet, steel, alum])
     api_id = user.slotnum + 1
     new_slotitem = json.loads(
         '{"api_create_flag":1,"api_shizai_flag":1,"api_slot_item":{"api_id":43,"api_slotitem_id":44},"api_material":[99999,99999,99999,99999,999,999,999,999],"api_type3":15,"api_unsetslot":[10,43]}')
     new_slotitem['api_slot_item']['api_id'] = api_id
     slot_id = randrange(1, 138)
     api_type3 = json.loads(Slotitem.query.filter_by(api_id=slot_id).first().api_type)[2]
-    new_slotitem['api_slot_item']['api_slotitem_id'] = slot_id
-    new_slotitem['api_type3'] = api_type3
+    new_slotitem['api_slot_item']['api_slotitem_id'] = int(slot_id)
+    new_slotitem['api_type3'] = int(api_type3)
     data = json.loads('{"api_id":10,"api_slotitem_id":56,"api_locked":0,"api_level":0,"api_equipped":0}')
     data['api_id'] = api_id
-    data['api_slotitem_id'] = slot_id
+    data['api_slotitem_id'] = int(slot_id)
     slot_item = json.loads(user.slot_item)
     slot_item.append(data)
     user.slot_item = json.dumps(slot_item)
@@ -155,20 +156,21 @@ def furniture_change(user, fur_list=["35", "71", "118", "101", "160", "189"]):
 
 
 def creatship(user, fuel=30, bullet=30, steel=30, alum=30, large_flag=0, zicai=1, quick_flag=0, kdock_id=1):
-    if large_flag == '1':
-        if zicai == '1':
+    fuel, bullet, steel,alum ,large_flag,zicai,quick_flag,kdock_id = map(int, [fuel, bullet, steel,alum,large_flag,zicai,quick_flag,kdock_id])
+    if large_flag == 1:
+        if zicai == 1:
             pool = Shipdata.query.filter(Shipdata.api_backs > 4, Shipdata.api_backs < 8,
                                          Shipdata.api_afterlv != 0).all()
             rand = pool[randrange(len(pool))]
-        elif zicai == '20':
+        elif zicai == 20:
             pool = Shipdata.query.filter(Shipdata.api_backs > 5, Shipdata.api_backs < 8,
                                          Shipdata.api_afterlv != 0).all()
             rand = pool[randrange(len(pool))]
-        elif zicai == '100':
+        elif zicai == 100:
             pool = Shipdata.query.filter(Shipdata.api_backs > 6, Shipdata.api_backs < 8,
                                          Shipdata.api_afterlv != 0).all()
             rand = pool[randrange(len(pool))]
-    elif large_flag == '0':
+    elif large_flag == 0:
         pool = Shipdata.query.filter(Shipdata.api_backs > 0, Shipdata.api_backs < 6,
                                      Shipdata.api_afterlv != 0).all()
         rand = pool[randrange(len(pool))]
@@ -240,6 +242,7 @@ def destroyship(user, api_ship_id):
 
 
 def getkship(user, api_kdock_id):
+
     shipnum = int(user.slotnum) + 1
     user.slotnum = shipnum
     api_kdock_id = int(api_kdock_id) - 1
@@ -286,6 +289,75 @@ def getkship(user, api_kdock_id):
     print(resp)
     return resp
 
+
+def get_unsetslot(user):
+    slotitems = json.loads(user.slot_item)
+    unsetslots = json.loads(
+        '{"api_slottype1":-1,"api_slottype2":-1,"api_slottype3":-1,"api_slottype4":-1,"api_slottype5":-1,"api_slottype6":-1,"api_slottype7":-1,"api_slottype8":-1,"api_slottype9":-1,"api_slottype10":-1,"api_slottype11":-1,"api_slottype12":-1,"api_slottype13":-1,"api_slottype14":-1,"api_slottype15":-1,"api_slottype16":-1,"api_slottype17":-1,"api_slottype18":-1,"api_slottype19":-1,"api_slottype20":-1,"api_slottype21":-1,"api_slottype22":-1,"api_slottype23":-1,"api_slottype24":-1,"api_slottype25":-1,"api_slottype26":-1,"api_slottype27":-1,"api_slottype28":-1,"api_slottype29":-1,"api_slottype30":-1,"api_slottype31":-1,"api_slottype32":-1,"api_slottype33":-1,"api_slottype34":-1,"api_slottype35":-1,"api_slottype36":-1,"api_slottype37":-1,"api_slottype38":-1,"api_slottype39":-1}')
+    for slotitem in slotitems:
+        if str(slotitem['api_equipped']) == '0':
+            s_type = json.loads(Slotitem.query.filter_by(api_id=slotitem['api_slotitem_id']).first().api_type)[2]
+            s_type = 'api_slottype' + str(s_type)
+            if str(unsetslots[s_type]) == '-1':
+                unsetslots[s_type] = [int(slotitem['api_id'])]
+            else:
+                unsetslots[s_type].append(int(slotitem['api_id']))
+
+    return unsetslots
+
+
+def hensei_change(user,api_ship_id,api_id,api_ship_idx):
+    api_ship_id, api_id, api_ship_idx = map(int, [api_ship_id, api_id, api_ship_idx])
+    api_id = int(api_id) -1
+    deck = json.loads(user.api_deck_port)
+    deck[api_id]['api_ship'][int(api_ship_idx)] = int(api_ship_id)
+    user.api_deck_port = json.dumps(deck)
+    db.session.commit()
+    return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
+
+
+def ship3(user, api_shipid, **kw):
+    ships = json.loads(user.api_ship)
+    decks = json.loads(user.api_deck_port)
+    for i in range(len(ships)):
+        if ships[i]['api_id'] == int(api_shipid):
+            break
+    resp = dict(api_result=1, api_result_msg='成功', api_data=[dict(api_ship_data=[ships[i]]), dict(api_deck_data=decks), dict(api_slot_data=get_unsetslot(user))])
+    resp = json.dumps(resp)
+    return resp
+
+#换装备
+def kaisou_slotset(user,api_item_id,ship_id,api_slot_idx):
+    slotitems = json.loads(user.slot_item)
+    ships = json.loads(user.api_ship)
+    api_item_id,ship_id ,api_slot_idx=map(int,[api_item_id,ship_id,api_slot_idx])
+    for i in range(len(ships)):
+        if ships[i]['api_id'] == int(ship_id):
+            break
+    old_slotitem_id = ships[i]['api_slot'][int(api_slot_idx)]
+    if str(old_slotitem_id) != '-1':  #原装备不为空
+        for j in range(len(slotitems)):
+            if slotitems[j]['api_id'] == int(old_slotitem_id):
+                break
+        if str(api_item_id) != '-1':
+            for k in range(len(slotitems)):
+                if slotitems[k]['api_id'] == int(api_item_id):
+                    break
+            slotitems[k]['api_equipped'] = 0
+        ships[i]['api_slot'][int(api_slot_idx)] = api_item_id
+        slotitems[j]['api_equipped'] = 0
+    elif str(old_slotitem_id) == '-1':  #原装备为空
+        for k in range(len(slotitems)):
+            if slotitems[k]['api_id'] == int(api_item_id):
+                break
+        ships[i]['api_slot'][int(api_slot_idx)] = api_item_id
+        slotitems[k]['api_equipped'] = 1
+    user.slot_item = json.dumps(slotitems)
+    user.api_ship = json.dumps(ships)
+    print(ships[i]['api_slot'])
+    print(slotitems)
+    #db.session.commit()
+    return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
 
 @app.route('/api_start2',methods=['GET', 'POST'])
 def start():
@@ -338,9 +410,10 @@ def api_get_member(funcm):
         if funcm == 'record':
             res = 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":{"api_member_id":19053956,"api_nickname":"DMM噎屎了","api_nickname_id":"132175244","api_cmt":"","api_cmt_id":"","api_photo_url":"","api_level":97,"api_rank":1,"api_experience":[842798,851500],"api_war":{"api_win":"55710","api_lose":"10","api_rate":"0.99"},"api_mission":{"api_count":"2464","api_success":"2451","api_rate":"99.47"},"api_practice":{"api_win":"4500","api_lose":"10","api_rate":"99.99"},"api_friend":0,"api_deck":4,"api_kdoc":4,"api_ndoc":4,"api_ship":[130,230],"api_slotitem":[504,2048],"api_furniture":500,"api_complate":["0.0","0.0"],"api_large_dock":1,"api_material_max":100000}}'
             return res
-        #舰娘改造
+        #查询
         if funcm == 'ship3':
-            pass
+            shipid = request.form['api_shipid']
+            return ship3(user,shipid)
         #装备
         if funcm == 'slot_item':
             req = dict(api_result=1, api_result_msg='成功', api_data=json.loads(user.slot_item))
@@ -350,7 +423,10 @@ def api_get_member(funcm):
             return resp
         #库存装备
         if funcm == 'unsetslot':
-            pass
+            resp = dict(api_result=1, api_result_msg='成功',
+                        api_data=get_unsetslot(user))
+            resp = json.dumps(resp)
+            return resp
         #氪金物
         if funcm == 'useitem':
             res = 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":[{"api_member_id":19053956,"api_id":10,"api_value":9,"api_usetype":4,"api_category":6,"api_name":"\u5bb6\u5177\u7bb1\uff08\u5c0f\uff09","api_description":["",""],"api_price":0,"api_count":9},{"api_member_id":19053956,"api_id":11,"api_value":3,"api_usetype":4,"api_category":6,"api_name":"\u5bb6\u5177\u7bb1\uff08\u4e2d\uff09","api_description":["",""],"api_price":0,"api_count":3},{"api_member_id":19053956,"api_id":12,"api_value":1,"api_usetype":4,"api_category":6,"api_name":"\u5bb6\u5177\u7bb1\uff08\u5927\uff09","api_description":["",""],"api_price":0,"api_count":1},{"api_member_id":19053956,"api_id":54,"api_value":4,"api_usetype":0,"api_category":0,"api_name":"\u7d66\u7ce7\u8266\u300c\u9593\u5bae\u300d","api_description":["",""],"api_price":0,"api_count":4},{"api_member_id":19053956,"api_id":57,"api_value":2,"api_usetype":4,"api_category":0,"api_name":"\u52f2\u7ae0","api_description":["",""],"api_price":0,"api_count":2},{"api_member_id":19053956,"api_id":50,"api_value":10,"api_usetype":0,"api_category":0,"api_name":"\u5fdc\u6025\u4fee\u7406\u8981\u54e1","api_description":["",""],"api_price":0,"api_count":10}]}'
@@ -378,10 +454,29 @@ def api_req_furniture():
         
 @app.route('/api_req_hensei/change',methods=[ 'POST'])
 def api_req_hensei():
-    pass
-@app.route('/api_req_kaisou/slotset',methods=[ 'POST'])
-def api_req_kaisou():
-    pass
+    if request.form['api_token']:
+        uid = request.form['api_token']
+        user = Userdata.query.filter_by(uid=uid).first()
+        api_ship_id = request.form['api_ship_id']
+        api_id = request.form['api_id']
+        api_ship_idx = request.form['api_ship_idx'] #页数
+        return hensei_change(user,api_ship_id,api_id,api_ship_idx)
+
+@app.route('/api_req_kaisou/<slot>',methods=[ 'POST'])
+def api_req_kaisou(slot):
+    if slot == 'slotset':
+        if request.form['api_token']:
+            uid = request.form['api_token']
+            user = Userdata.query.filter_by(uid=uid).first()
+            api_item_id = request.form['api_item_id']
+            ship_id = request.form['api_id']
+            api_slot_idx = request.form['api_slot_idx']
+            return kaisou_slotset(user,api_item_id,ship_id,api_slot_idx)
+        if slot == 'unsetslot_all':
+            pass
+
+
+
 @app.route('/api_req_kousyou/<funck>',methods=[ 'POST'])
 def api_req_kousyou(funck):
     if request.form['api_token']:
@@ -420,8 +515,6 @@ def api_req_kousyou(funck):
         if funck == 'getship':
             api_kdock_id = request.form['api_kdock_id']
             return getkship(user,api_kdock_id)
-
-
 
 @app.route('/api_req_member/<funm1>',methods=[ 'POST'])
 def api_req_member(funcm1):
