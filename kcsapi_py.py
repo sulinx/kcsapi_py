@@ -125,13 +125,15 @@ class Shipdata(db.Model):
 def get_slotitem(user,fuel=10, bullet=10, steel=10, alum=10):
     fuel, bullet, steel, alum = map(int,[fuel, bullet, steel, alum])
     api_id = user.slotnum + 1
+    user.slotnum = user.slotnum + 1
     new_slotitem = json.loads(
-        '{"api_create_flag":1,"api_shizai_flag":1,"api_slot_item":{"api_id":43,"api_slotitem_id":44},"api_material":[99999,99999,99999,99999,999,999,999,999],"api_type3":15,"api_unsetslot":[10,43]}')
-    new_slotitem['api_slot_item']['api_id'] = api_id
+        '{"api_create_flag":1,"api_shizai_flag":1,"api_slot_item":{"api_id":43,"api_slotitem_id":44},"api_material":[10000,10000,10000,10000,10,10,10,10],"api_type3":15,"api_unsetslot":[10,43]}')
     slot_id = randrange(1, 138)
     api_type3 = json.loads(Slotitem.query.filter_by(api_id=slot_id).first().api_type)[2]
+    new_slotitem['api_slot_item']['api_id'] = api_id
     new_slotitem['api_slot_item']['api_slotitem_id'] = int(slot_id)
     new_slotitem['api_type3'] = int(api_type3)
+    new_slotitem['api_unsetslot'] = [api_id]
     data = json.loads('{"api_id":10,"api_slotitem_id":56,"api_locked":0,"api_level":0,"api_equipped":0}')
     data['api_id'] = api_id
     data['api_slotitem_id'] = int(slot_id)
@@ -142,21 +144,19 @@ def get_slotitem(user,fuel=10, bullet=10, steel=10, alum=10):
     return json.dumps(new_slotitem)
 
 
-def furniture_change(user, fur_list=["35", "71", "118", "101", "160", "189"]):
-    if '' not in fur_list:
-        fur_list = [request.form['api_floor'], request.form['api_wallpaper'], request.form['api_wallhanging'],
-                request.form['api_window'], request.form['api_shelf'], request.form['api_desk']]
-    else:
-        fur_list = ["35", "71", "118", "101", "160", "189"]
+def furniture_change(user, fur_list=[1,38,72,102,133,164]):
+    if '' in fur_list:
+        fur_list = [1,38,72,102,133,164]
+    fur_list = list(map(int,fur_list))
     api_basic = json.loads(user.api_basic)
     api_basic['api_furniture'] = fur_list
     user.api_basic = json.dumps(api_basic)
     db.session.commit()
-    return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
+    return r'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
 
 
-def creatship(user, fuel=30, bullet=30, steel=30, alum=30, large_flag=0, zicai=1, quick_flag=0, kdock_id=1):
-    fuel, bullet, steel,alum ,large_flag,zicai,quick_flag,kdock_id = map(int, [fuel, bullet, steel,alum,large_flag,zicai,quick_flag,kdock_id])
+def creatship(user, fuel=30, bullet=30, steel=30, alum=30,  zicai=1, large_flag=0, quick_flag=0, kdock_id=1):
+    fuel, bullet, steel,alum ,zicai,large_flag,quick_flag,kdock_id = map(int, [fuel, bullet, steel,alum,zicai,large_flag,quick_flag,kdock_id])
     if large_flag == 1:
         if zicai == 1:
             pool = Shipdata.query.filter(Shipdata.api_backs > 4, Shipdata.api_backs < 8,
@@ -192,9 +192,9 @@ def creatship(user, fuel=30, bullet=30, steel=30, alum=30, large_flag=0, zicai=1
     kdock[int(kdock_id) - 1]['api_item5'] = zicai
     user.api_kdock = json.dumps(kdock)
     db.session.commit()
-    if quick_flag == '1':
+    if quick_flag == 1:
         quick_creat(user,kdock_id)
-    return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
+    return r'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
 
 
 def quick_creat(user, kdock_id):
@@ -205,7 +205,7 @@ def quick_creat(user, kdock_id):
     kdock[kdock_id]['api_complete_time_str'] = 0
     user.api_kdock = json.dumps(kdock)
     db.session.commit()
-    return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
+    return r'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
 
 
 def destroyitem(user, slotitem_ids):
@@ -225,7 +225,7 @@ def destroyitem(user, slotitem_ids):
         data.remove(i)
     user.slotitem = json.dumps(data)
     db.session.commit()
-    return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":{"api_get_material":%s}}' % json.dumps(
+    return r'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":{"api_get_material":%s}}' % json.dumps(
         res1)
 
 
@@ -238,11 +238,10 @@ def destroyship(user, api_ship_id):
             break
     user.api_ship = json.dumps(data)
     db.session.commit()
-    return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":{"api_material":[99999,99999,99999,99999]}}'
+    return r'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":{"api_material":[99999,99999,99999,99999]}}'
 
 
 def getkship(user, api_kdock_id):
-
     shipnum = int(user.slotnum) + 1
     user.slotnum = shipnum
     api_kdock_id = int(api_kdock_id) - 1
@@ -286,7 +285,7 @@ def getkship(user, api_kdock_id):
                 api_data=dict(api_id=shipnum, api_ship_id=new_ship['api_ship_id'], api_kdock=kdock, api_ship=new_ship,
                               api_slotitem=None))
     resp = 'svdata=' + json.dumps(resp)
-    print(resp)
+    #print(resp)
     return resp
 
 
@@ -306,14 +305,36 @@ def get_unsetslot(user):
     return unsetslots
 
 
-def hensei_change(user,api_ship_id,api_id,api_ship_idx):
+def hensei_change(user,api_ship_id,api_id,api_ship_idx): #舰队编成
     api_ship_id, api_id, api_ship_idx = map(int, [api_ship_id, api_id, api_ship_idx])
-    api_id = int(api_id) -1
+    api_id = api_id -1
     deck = json.loads(user.api_deck_port)
-    deck[api_id]['api_ship'][int(api_ship_idx)] = int(api_ship_id)
+    to_shipid = deck[api_id]['api_ship'][api_ship_idx]
+    idx2 = '1'
+    for i in range(len(deck)):
+        if api_ship_id in deck[i]['api_ship']:
+            idx1 = i
+            for j in (range(len(deck[i]['api_ship']))):
+                if int(deck[i]['api_ship'][j]) == api_ship_id:
+                    idx2 = j
+                    break
+    if api_ship_id != -1:
+        if to_shipid == -1:
+            deck[api_id]['api_ship'][api_ship_idx] = api_ship_id
+            if idx2 != '1':
+                print(idx2)
+                deck[idx1]['api_ship'].pop(idx2)
+                deck[idx1]['api_ship'].append(-1)
+        elif to_shipid != -1:
+            deck[idx1]['api_ship'][idx2] = to_shipid
+            deck[api_id]['api_ship'][api_ship_idx] = api_ship_id
+    elif api_ship_id == -1:
+        deck[api_id]['api_ship'].pop(api_ship_idx)
+        deck[api_id]['api_ship'].append(-1)
+    print(deck)
     user.api_deck_port = json.dumps(deck)
     db.session.commit()
-    return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
+    return r'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
 
 
 def ship3(user, api_shipid, **kw):
@@ -321,8 +342,9 @@ def ship3(user, api_shipid, **kw):
     decks = json.loads(user.api_deck_port)
     for i in range(len(ships)):
         if ships[i]['api_id'] == int(api_shipid):
+            idx = i
             break
-    resp = dict(api_result=1, api_result_msg='成功', api_data=[dict(api_ship_data=[ships[i]]), dict(api_deck_data=decks), dict(api_slot_data=get_unsetslot(user))])
+    resp = dict(api_result=1, api_result_msg='成功', api_data=[dict(api_ship_data=[ships[idx]]), dict(api_deck_data=decks), dict(api_slot_data=get_unsetslot(user))])
     resp = json.dumps(resp)
     return resp
 
@@ -333,33 +355,37 @@ def kaisou_slotset(user,api_item_id,ship_id,api_slot_idx):
     api_item_id,ship_id ,api_slot_idx=map(int,[api_item_id,ship_id,api_slot_idx])
     for i in range(len(ships)):
         if ships[i]['api_id'] == int(ship_id):
+            idx1 = i
             break
-    old_slotitem_id = ships[i]['api_slot'][int(api_slot_idx)]
+    old_slotitem_id = ships[idx1]['api_slot'][int(api_slot_idx)]
     if str(old_slotitem_id) != '-1':  #原装备不为空
         for j in range(len(slotitems)):
             if slotitems[j]['api_id'] == int(old_slotitem_id):
+                idx2 = j
                 break
         if str(api_item_id) != '-1':
             for k in range(len(slotitems)):
                 if slotitems[k]['api_id'] == int(api_item_id):
+                    idx3 = k
                     break
-            slotitems[k]['api_equipped'] = 0
-        ships[i]['api_slot'][int(api_slot_idx)] = api_item_id
-        slotitems[j]['api_equipped'] = 0
+            slotitems[idx3]['api_equipped'] = 0
+        ships[idx1]['api_slot'][int(api_slot_idx)] = api_item_id
+        slotitems[idx2]['api_equipped'] = 0
     elif str(old_slotitem_id) == '-1':  #原装备为空
         for k in range(len(slotitems)):
             if slotitems[k]['api_id'] == int(api_item_id):
+                idx4 = k
                 break
-        ships[i]['api_slot'][int(api_slot_idx)] = api_item_id
-        slotitems[k]['api_equipped'] = 1
+        ships[idx1]['api_slot'][int(api_slot_idx)] = api_item_id
+        slotitems[idx4]['api_equipped'] = 1
     user.slot_item = json.dumps(slotitems)
     user.api_ship = json.dumps(ships)
     #print(ships[i]['api_slot'])
     #print(slotitems)
     db.session.commit()
-    return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
+    return r'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
 
-@app.route('/api_start2',methods=['GET', 'POST'])
+@app.route('/kcsapi/api_start2',methods=['GET', 'POST'])
 def start():
     if request.form['api_token']:
         resp = make_response(svdata, 200)
@@ -369,7 +395,7 @@ def start():
         abort(404)
 
 
-@app.route('/api_get_member/<funcm>',methods=['GET', 'POST'])
+@app.route('/kcsapi/api_get_member/<funcm>',methods=['GET', 'POST'])
 def api_get_member(funcm):
     if request.form['api_token']:
         uid = request.form['api_token']
@@ -408,7 +434,7 @@ def api_get_member(funcm):
             return resp
         #战绩
         if funcm == 'record':
-            res = 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":{"api_member_id":19053956,"api_nickname":"DMM噎屎了","api_nickname_id":"132175244","api_cmt":"","api_cmt_id":"","api_photo_url":"","api_level":97,"api_rank":1,"api_experience":[842798,851500],"api_war":{"api_win":"55710","api_lose":"10","api_rate":"0.99"},"api_mission":{"api_count":"2464","api_success":"2451","api_rate":"99.47"},"api_practice":{"api_win":"4500","api_lose":"10","api_rate":"99.99"},"api_friend":0,"api_deck":4,"api_kdoc":4,"api_ndoc":4,"api_ship":[130,230],"api_slotitem":[504,2048],"api_furniture":500,"api_complate":["0.0","0.0"],"api_large_dock":1,"api_material_max":100000}}'
+            res = r'{"api_result":1,"api_result_msg":"\u6210\u529f","api_data":{"api_member_id":19053956,"api_nickname":"DMM噎屎了","api_nickname_id":"132175244","api_cmt":"","api_cmt_id":"","api_photo_url":"","api_level":97,"api_rank":1,"api_experience":[842798,851500],"api_war":{"api_win":"55710","api_lose":"10","api_rate":"0.99"},"api_mission":{"api_count":"2464","api_success":"2451","api_rate":"99.47"},"api_practice":{"api_win":"4500","api_lose":"10","api_rate":"99.99"},"api_friend":0,"api_deck":4,"api_kdoc":4,"api_ndoc":4,"api_ship":[130,230],"api_slotitem":[504,2048],"api_furniture":500,"api_complate":["0.0","0.0"],"api_large_dock":1,"api_material_max":100000}}'
             return res
         #查询
         if funcm == 'ship3':
@@ -426,33 +452,36 @@ def api_get_member(funcm):
             resp = dict(api_result=1, api_result_msg='成功',
                         api_data=get_unsetslot(user))
             resp = json.dumps(resp)
-            return resp
+            return 'svdata=' + resp
         #氪金物
+        if funcm == 'payitem':
+            res = r'svdata = {"api_result": 1, "api_result_msg": "\u6210\u529f", "api_data": null}'
+            return res
         if funcm == 'useitem':
-            res = 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":[{"api_member_id":19053956,"api_id":10,"api_value":9,"api_usetype":4,"api_category":6,"api_name":"\u5bb6\u5177\u7bb1\uff08\u5c0f\uff09","api_description":["",""],"api_price":0,"api_count":9},{"api_member_id":19053956,"api_id":11,"api_value":3,"api_usetype":4,"api_category":6,"api_name":"\u5bb6\u5177\u7bb1\uff08\u4e2d\uff09","api_description":["",""],"api_price":0,"api_count":3},{"api_member_id":19053956,"api_id":12,"api_value":1,"api_usetype":4,"api_category":6,"api_name":"\u5bb6\u5177\u7bb1\uff08\u5927\uff09","api_description":["",""],"api_price":0,"api_count":1},{"api_member_id":19053956,"api_id":54,"api_value":4,"api_usetype":0,"api_category":0,"api_name":"\u7d66\u7ce7\u8266\u300c\u9593\u5bae\u300d","api_description":["",""],"api_price":0,"api_count":4},{"api_member_id":19053956,"api_id":57,"api_value":2,"api_usetype":4,"api_category":0,"api_name":"\u52f2\u7ae0","api_description":["",""],"api_price":0,"api_count":2},{"api_member_id":19053956,"api_id":50,"api_value":10,"api_usetype":0,"api_category":0,"api_name":"\u5fdc\u6025\u4fee\u7406\u8981\u54e1","api_description":["",""],"api_price":0,"api_count":10}]}'
+            res = r'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":[{"api_member_id":19053956,"api_id":10,"api_value":9,"api_usetype":4,"api_category":6,"api_name":"\u5bb6\u5177\u7bb1\uff08\u5c0f\uff09","api_description":["",""],"api_price":0,"api_count":9},{"api_member_id":19053956,"api_id":11,"api_value":3,"api_usetype":4,"api_category":6,"api_name":"\u5bb6\u5177\u7bb1\uff08\u4e2d\uff09","api_description":["",""],"api_price":0,"api_count":3},{"api_member_id":19053956,"api_id":12,"api_value":1,"api_usetype":4,"api_category":6,"api_name":"\u5bb6\u5177\u7bb1\uff08\u5927\uff09","api_description":["",""],"api_price":0,"api_count":1},{"api_member_id":19053956,"api_id":54,"api_value":4,"api_usetype":0,"api_category":0,"api_name":"\u7d66\u7ce7\u8266\u300c\u9593\u5bae\u300d","api_description":["",""],"api_price":0,"api_count":4},{"api_member_id":19053956,"api_id":57,"api_value":2,"api_usetype":4,"api_category":0,"api_name":"\u52f2\u7ae0","api_description":["",""],"api_price":0,"api_count":2},{"api_member_id":19053956,"api_id":50,"api_value":10,"api_usetype":0,"api_category":0,"api_name":"\u5fdc\u6025\u4fee\u7406\u8981\u54e1","api_description":["",""],"api_price":0,"api_count":10}]}'
             return res
     else:
         abort(404)
 #api_port
-@app.route('/api_port/port',methods=['GET', 'POST'])
+@app.route('/kcsapi/api_port/port',methods=['GET', 'POST'])
 def api_port():
     if request.form['api_token']:
         uid = request.form['api_token']
         user = Userdata.query.filter_by(uid=uid).first()
-        data = dice(api_material=json.loads(user.api_material),api_deck_port=json.loads(user.api_deck_port),api_ndock=json.loads(user.api_ndock),api_ship=json.loads(user.api_ship),api_basic=json.loads(user.api_basic),api_log=json.loads(user.api_log),api_p_bgm_id=json.loads(user.api_p_bgm_id))
+        data = dict(api_material=json.loads(user.api_material),api_deck_port=json.loads(user.api_deck_port),api_ndock=json.loads(user.api_ndock),api_ship=json.loads(user.api_ship),api_basic=json.loads(user.api_basic),api_log=json.loads(user.api_log),api_p_bgm_id=user.api_p_bgm_id)
         req = dict(api_result=1, api_result_msg='成功', api_data=data)
         jso = 'svdata=' + json.dumps(req)
         resp = make_response(jso, 200)
         resp.headers['Content-Type'] = 'text/html'
         return resp
-@app.route('/api_req_furniture/change',methods=[ 'POST'])
+@app.route('/kcsapi/api_req_furniture/change',methods=[ 'POST'])
 def api_req_furniture():
     if request.form['api_token']:
         uid = request.form['api_token']
         user = Userdata.query.filter_by(uid=uid).first()
-        return furniture_change(user,[request.form['api_floor'],request.form['api_wallpaper'],request.form['api_wallhanging'],request.form['api_window'],request.form['api_shelf'],request.form['api_desk']])
+        return furniture_change(user,[request.form['api_floor'],request.form['api_wallpaper'],request.form['api_window'],request.form['api_wallhanging'],request.form['api_shelf'],request.form['api_desk']])
         
-@app.route('/api_req_hensei/change',methods=[ 'POST'])
+@app.route('/kcsapi/api_req_hensei/change',methods=[ 'POST'])
 def api_req_hensei():
     if request.form['api_token']:
         uid = request.form['api_token']
@@ -462,7 +491,7 @@ def api_req_hensei():
         api_ship_idx = request.form['api_ship_idx'] #页数
         return hensei_change(user,api_ship_id,api_id,api_ship_idx)
 
-@app.route('/api_req_kaisou/<slot>',methods=[ 'POST'])
+@app.route('/kcsapi/api_req_kaisou/<slot>',methods=[ 'POST'])
 def api_req_kaisou(slot):
     if slot == 'slotset':
         if request.form['api_token']:
@@ -477,7 +506,7 @@ def api_req_kaisou(slot):
 
 
 
-@app.route('/api_req_kousyou/<funck>',methods=[ 'POST'])
+@app.route('/kcsapi/api_req_kousyou/<funck>',methods=[ 'POST'])
 def api_req_kousyou(funck):
     if request.form['api_token']:
         uid = request.form['api_token']
@@ -499,7 +528,7 @@ def api_req_kousyou(funck):
             large_flag = request.form['api_large_flag']
             quick_flag = request.form['api_highspeed']
             kdock_id = request.form['api_kdock_id']
-            return creatship(user,fuel,bullet,steel,alum,large_flag,quick_flag,kdock_id)
+            return creatship(user,fuel,bullet,steel,alum,zicai,large_flag,quick_flag,kdock_id)
         #建造加速
         if funck == 'createship_speedchange':
             return quick_creat(user,request.form['api_kdock_id'])
@@ -516,13 +545,13 @@ def api_req_kousyou(funck):
             api_kdock_id = request.form['api_kdock_id']
             return getkship(user,api_kdock_id)
 
-@app.route('/api_req_member/<funm1>',methods=[ 'POST'])
+@app.route('/kcsapi/api_req_member/<funcm1>',methods=[ 'POST'])
 def api_req_member(funcm1):
     if request.form['api_token']:
         uid = request.form['api_token']
         user = Userdata.query.filter_by(uid=uid).first()
         if funcm1 == 'get_incentive':
-            return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":{"api_count":0}}'
+            return r'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":{"api_count":0}}'
         # 任务列表
         if funcm1 == 'questlist':
             pass
@@ -536,12 +565,12 @@ def api_req_member(funcm1):
             api_deck_port[api_deck_id]['api_name_id'] = 157269026
             user.api_deck_port = json.dumps(api_deck_port)
             db.session.commit()
-            return 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
+            return r'svdata={"api_result":1,"api_result_msg":"\u6210\u529f"}'
 
 #秃子榜
-@app.route('/api_req_ranking/getlist',methods=[ 'POST'])
+@app.route('/kcsapi/api_req_ranking/getlist',methods=[ 'POST'])
 def api_req_ranking():
-    svdata = 'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":{"api_count":10,"api_page_count":1,"api_disp_page":1,"api_list":[{"api_no":1,"api_member_id":19053956,"api_level":97,"api_rank":1,"api_nickname":"DMM噎屎了","api_experience":813259,"api_comment":"","api_rate":227,"api_flag":0,"api_medals":1,"api_nickname_id":"132175244","api_comment_id":"TEST"}]}}'
+    svdata = r'svdata={"api_result":1,"api_result_msg":"\u6210\u529f","api_data":{"api_count":10,"api_page_count":1,"api_disp_page":1,"api_list":[{"api_no":1,"api_member_id":19053956,"api_level":97,"api_rank":1,"api_nickname":"DMM噎屎了","api_experience":813259,"api_comment":"","api_rate":227,"api_flag":0,"api_medals":1,"api_nickname_id":"132175244","api_comment_id":"TEST"}]}}'
     return svdata
 
 if __name__ == '__main__':
