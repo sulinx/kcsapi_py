@@ -1,3 +1,6 @@
+#!/usr/bin/env python3.6
+# -*- coding: utf-8 -*-
+
 from flask import Flask,request,make_response,render_template,abort
 from flask_sqlalchemy import SQLAlchemy
 from svdata import *
@@ -503,7 +506,6 @@ def api_req_kaisou(slot):
             return kaisou_slotset(user,api_item_id,ship_id,api_slot_idx)
         if slot == 'unsetslot_all':
             pass
-
 
 
 @app.route('/kcsapi/api_req_kousyou/<funck>',methods=[ 'POST'])
